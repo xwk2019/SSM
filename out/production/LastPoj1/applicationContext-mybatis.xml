@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.5.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.5.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:component-scan base-package="cn.last"></context:component-scan>
+
+    <!--引入属性文件 -->
+    <context:property-placeholder location="classpath:database.properties"/>
+    <!-- 1.数据源  -->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <!-- 2.SqlSessionFactoryBean  -->
+    <bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sqlSessionFactory">
+        <property name="dataSource" ref="dataSource"></property>
+        <property name="configLocation" value="classpath:mybatis-config.xml"></property>
+        <!--
+       <property name="configurationProperties">
+           <props>
+               <prop key="typeAliasesPackage">cn.jechch.pojo</prop>
+           </props>
+       </property>
+         -->
+
+    </bean>
+
+    <!-- 3.SqlSessionTemplate
+    <bean class="org.mybatis.spring.SqlSessionTemplate" id="sqlSessionTemplate">
+    	<constructor-arg ref="sqlSessionFactory"></constructor-arg>
+    </bean>
+    -->
+    <!-- 数据扫描器
+    <bean class="org.mybatis.spring.mapper.MapperFactoryBean" id="userMapper">
+    	<property name="mapperInterface" value="UserMapper"></property>
+    	<property name="sqlSessionFactory" ref="sqlSessionFactory"></property>
+    </bean>
+    -->
+    <!-- Mapper接口包扫描 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="cn.last.dao"></property>
+    </bean>
+
+    <!-- 事务管理类 -->
+    <bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager" id="transactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <!-- 配置事务策略 -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="find*"
+                       propagation="SUPPORTS"
+                       timeout="-1"
+                       read-only="true"
+                       isolation="DEFAULT"
+                       rollback-for="java.lang.RuntimeException"
+                       no-rollback-for="java.lang.Exception"/>
+            <!-- propagation默认值为REQUIRED -->
+            <tx:method name="add*"/>
+            <tx:method name="del*"/>
+            <tx:method name="update*"/>
+            <tx:method name="*"/>
+        </tx:attributes>
+
+    </tx:advice>
+
+    <!-- 切面配置 -->
+    <aop:config>
+        <!-- 切点 -->
+        <aop:pointcut expression="execution(* cn.last.service..*.*(..))" id="txPoint"/>
+        <!-- 增强处理类 -->
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="txPoint"/>
+    </aop:config>
+
+
+</beans>
